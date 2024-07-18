@@ -1,87 +1,97 @@
-MindMate: Your Personal Mental Health Companion
-Overview
-Welcome to MindMate, a comprehensive mental health chatbot designed to provide emotional support, practical advice, and resources for individuals seeking mental well-being. Built using Streamlit and Azure's OpenAI, MindMate offers a variety of therapist personas to cater to different needs, from general support to cognitive behavioral therapy.
+Here is a shortened version of your MindMate README file:
 
-Features
-Interactive Chat: Engage in meaningful conversations with MindMate, designed to offer empathy, support, and guidance.
-Multiple Therapist Personas: Choose from different therapist templates like Counsellor, Cognitive Behavioral Therapist, Student Counsellor, Psychologist, and Best Friend.
-Session Management: Save, load, and delete sessions, ensuring your conversations are accessible whenever you need them.
-Multilingual Support: Communicate in various languages, making mental health support accessible to a broader audience.
-Conversation Insights: Generate insights and summaries from your sessions, helping you track progress and understand your mental health journey better.
-Secure and Private: All conversations are stored securely, respecting user privacy and confidentiality.
-Setup
-Prerequisites
-Python 3.8 or higher
-Streamlit
-Azure OpenAI credentials
-Installation
-Clone the repository:
+---
 
-sh
-Copy code
-git clone https://github.com/your-username/mindmate.git
-cd mindmate
-Install the required packages:
+# MindMate: Your Personal Mental Health Companion
 
-sh
-Copy code
-pip install -r requirements.txt
-Set up environment variables:
-Create a .env file in the root directory with the following content:
+## Overview
+MindMate is a comprehensive mental health chatbot built with Streamlit and Azure OpenAI. It offers emotional support, practical advice, and resources through various therapist personas.
 
-env
-Copy code
-AZURE_BASE_URL=your_azure_base_url
-AZURE_DEPLOYMENT_NAME=your_azure_deployment_name
-AZURE_OPEN_API_KEY=your_azure_open_api_key
-Running the Application
+## Features
+- **Interactive Chat**: Engage in supportive conversations.
+- **Multiple Therapist Personas**: Choose from Counsellor, Cognitive Behavioral Therapist, Student Counsellor, Psychologist, and Best Friend.
+- **Session Management**: Save, load, and delete sessions.
+- **Multilingual Support**: Communicate in multiple languages.
+- **Conversation Insights**: Generate summaries and insights.
+- **Secure and Private**: Ensures user privacy and confidentiality.
+
+## Setup
+### Prerequisites
+- Python 3.8 or higher
+- Streamlit
+- Azure OpenAI credentials
+
+### Installation
+1. Clone the repository:
+    ```sh
+    git clone https://github.com/your-username/mindmate.git
+    cd mindmate
+    ```
+2. Install the required packages:
+    ```sh
+    pip install -r requirements.txt
+    ```
+3. Set up environment variables:
+    Create a `.env` file in the root directory with:
+    ```env
+    AZURE_BASE_URL=your_azure_base_url
+    AZURE_DEPLOYMENT_NAME=your_azure_deployment_name
+    AZURE_OPEN_API_KEY=your_azure_open_api_key
+    ```
+
+### Running the Application
 Run the Streamlit application:
-
-sh
-Copy code
+```sh
 streamlit run app.py
-Usage
-Navigation
-MindMate provides a sidebar for easy navigation through different sections:
+```
 
-Today: Overview and daily mental health tips.
-Sessions: Manage your chat sessions, including starting new ones, loading existing ones, and deleting sessions.
-Tools: Access various mental health tools and resources.
-Therapists: Choose from different therapist personas to guide your conversations.
-Insights: Generate and view insights from your sessions.
-Settings: Customize your MindMate experience.
-How to use?: Instructions on how to use MindMate effectively.
-Starting a Session
-Select "Sessions" from the sidebar.
-Click "Start a new session" to begin a conversation.
-Choose a therapist persona and language for the session.
-Engage in a meaningful conversation with MindMate.
-Managing Sessions
-Load Sessions: Automatically load previously saved sessions upon startup.
-Save Sessions: Your session is saved automatically after each interaction.
-Delete Sessions: Remove unwanted sessions from the database.
-Therapist Personas
-Choose from various therapist personas to customize your experience:
+## Usage
+### Navigation
+- **Today**: Daily mental health tips.
+- **Sessions**: Start, load, and manage chat sessions.
+- **Tools**: Access mental health tools and resources.
+- **Therapists**: Choose therapist personas.
+- **Insights**: View session insights.
+- **Settings**: Customize your experience.
+- **How to use?**: Instructions for effective use.
 
-Counsellor: Compassionate and empathetic, providing emotional support.
-Cognitive Behavioral Therapist: Specialized in cognitive-behavioral techniques.
-Student Counsellor: Assists students with academic, social, and emotional challenges.
-Psychologist: Provides evidence-based psychological support.
-Best Friend: Offers a casual, friendly, and comforting presence.
-Generating Insights
-Select "Insights" from the sidebar.
-Choose a session to analyze.
-View a summary of the conversation and mood analysis.
-Contributing
-Contributions are welcome! Please fork the repository and submit a pull request with your changes.
+### Starting a Session
+1. Go to "Sessions".
+2. Click "Start a new session".
+3. Choose a therapist persona and language.
 
-License
-This project is licensed under the MIT License. See the LICENSE file for details.
+### Managing Sessions
+- **Load**: Automatically load previous sessions.
+- **Save**: Sessions are saved automatically.
+- **Delete**: Remove unwanted sessions.
 
-Acknowledgements
-Streamlit
-Azure OpenAI
-Contact
-For any questions or support, please reach out to [your-email@example.com].
+### Therapist Personas
+- **Counsellor**: Compassionate and empathetic support.
+- **Cognitive Behavioral Therapist**: Specialized techniques.
+- **Student Counsellor**: Academic and social support.
+- **Psychologist**: Evidence-based psychological support.
+- **Best Friend**: Friendly and comforting presence.
 
-Thank you for using MindMate. We hope it brings you the support and comfort you need on your mental health journey.
+### Generating Insights
+1. Go to "Insights".
+2. Select a session to analyze.
+3. View the summary and mood analysis.
+
+## Contributing
+Fork the repository and submit a pull request with your changes.
+
+## License
+Licensed under the MIT License. See the LICENSE file for details.
+
+## Acknowledgements
+- Streamlit
+- Azure OpenAI
+
+## Contact
+For support, email [your-email@example.com].
+
+Thank you for using MindMate. We hope it brings you support and comfort on your mental health journey.
+
+---
+
+You can customize this template further based on your preferences.
