@@ -1,11 +1,7 @@
-Here is a shortened version of your MindMate README file:
-
----
-
 # MindMate: Your Personal Mental Health Companion
 
 ## Overview
-MindMate is a comprehensive mental health chatbot built with Streamlit and Azure OpenAI.It offers emotional support, practical advice, and resources through various therapist personas.
+MindMate is a comprehensive mental health chatbot built with Streamlit and Azure OpenAI. It offers emotional support, practical advice, and resources through various therapist personas.
 
 ## Features
 - **Interactive Chat**: Engage in supportive conversations.
@@ -91,7 +87,3 @@ Licensed under the MIT License. See the LICENSE file for details.
 For support, email [your-email@example.com].
 
 Thank you for using MindMate. We hope it brings you support and comfort on your mental health journey.
-
----
-
-You can customize this template further based on your preferences.
