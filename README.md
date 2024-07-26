@@ -1,4 +1,3 @@
-Here's the updated README file with the added Hugging Face deployment section:
 
 ---
 
