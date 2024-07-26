@@ -1,3 +1,7 @@
+Here's the updated README file with the added Hugging Face deployment section:
+
+---
+
 # MindMate: Your Personal Mental Health Companion
 
 ## Overview
@@ -73,6 +77,9 @@ streamlit run app.py
 2. Select a session to analyze.
 3. View the summary and mood analysis.
 
+## Deployment on Hugging Face
+You can access the MindMate application on Hugging Face Spaces [here](https://huggingface.co/spaces/samiee2213/mindmate).
+
 ## Contributing
 Fork the repository and submit a pull request with your changes.
 
@@ -84,6 +91,8 @@ Licensed under the MIT License. See the LICENSE file for details.
 - Azure OpenAI
 
 ## Contact
-For support, email [your-email@example.com].
+For support, email [samridhiraj04@gmail.com].
 
 Thank you for using MindMate. We hope it brings you support and comfort on your mental health journey.
+
+---
