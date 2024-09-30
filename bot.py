@@ -1,8 +1,9 @@
 import streamlit as st
 import os
+import re
 from dotenv import load_dotenv
 from langchain.schema import HumanMessage, SystemMessage, AIMessage
-from langchain.chat_models import AzureChatOpenAI
+from langchain.chat_models import AzureChatOpenAI,ChatOpenAI
 from langchain.memory import ConversationBufferWindowMemory
 from langchain.prompts import PromptTemplate
 import warnings
@@ -13,32 +14,15 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 from dotenv import load_dotenv
+from langchain_google_genai import ChatGoogleGenerativeAI
+
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # Load environment variables
-
 load_dotenv()
-
-BASE_URL = os.getenv("AZURE_BASE_URL")
-DEPLOYMENT_NAME = os.getenv("AZURE_DEPLOYMENT_NAME")
-OPEN_API_KEY = os.getenv("AZURE_OPEN_API_KEY")
-
-if not BASE_URL or not DEPLOYMENT_NAME or not OPEN_API_KEY:
-    raise ValueError("One or more Azure OpenAI environment variables are not set.")
-
-chat = AzureChatOpenAI(
-    azure_endpoint=BASE_URL,
-    deployment_name=DEPLOYMENT_NAME,
-    openai_api_version="2024-02-01",
-    api_key=OPEN_API_KEY,
-    openai_api_type="Azure",
-    model="text-davinci-002",
-    temperature=0
-)
-
 st.set_page_config(page_title="MindMate", layout="wide", initial_sidebar_state="expanded")
-
+api_key = os.getenv("api_key")
 # CSS styles
 css = '''
 <style>
@@ -46,7 +30,6 @@ css = '''
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
-
 /* Sidebar styles */
 .sidebar-content {
     display: flex;
@@ -81,7 +64,6 @@ body {
     font-size: 1.2rem;
     font-weight: bold;
 }
-
 /* Chat styles */
 .chat-message {
     padding: 1.5rem;
@@ -110,7 +92,6 @@ body {
     padding: 0 1.5rem;
     color: #fff;
 }
-
 /* Session card styles */
 .session-card {
     display: flex;
@@ -205,7 +186,6 @@ body {
     font-weight: bold;
     text-align: center;
 }
-
 /* Tool card styles */
 .tool-card {
     background-color: #ffffff;
@@ -248,7 +228,6 @@ body {
 .tool-card .start-button:hover {
     background-color: #0056b3;
 }
-
 /* Therapist card styles */
 .therapist-card {
     background-color: #ffffff;
@@ -291,7 +270,6 @@ body {
 .therapist-card .select-button:hover {
     background-color: #0056b3;
 }
-
 /* Today page styles */
 .today-page {
     display: flex;
@@ -352,7 +330,6 @@ body {
     padding: 2rem;
     border-radius: 15px;
 }
-
 .how-to-use-page h2 {
     font-size: 2.5rem;
     color: #FF4B4B;
@@ -360,38 +337,31 @@ body {
     margin-bottom: 1rem;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
 }
-
 .how-to-use-page p {
     font-size: 1.2rem;
     margin-bottom: 1.5rem;
     line-height: 1.6;
 }
-
 .how-to-use-page .section {
     margin-bottom: 2rem;
 }
-
 .how-to-use-page .section h3 {
     font-size: 1.8rem;
     color: #FF6F61;
     margin-bottom: 0.5rem;
 }
-
 .how-to-use-page .section ul {
     list-style-type: none;
     padding-left: 0;
 }
-
 .how-to-use-page .section ul li {
     margin-bottom: 0.75rem;
 }
-
 .how-to-use-page .section ul li:before {
     content: "✔️";
     margin-right: 0.5rem;
     color: #FF4B4B;
 }
-
 .how-to-use-page img {
     max-width: 100%;
     border-radius: 10px;
@@ -421,7 +391,6 @@ user_template = '''
 
 # CSS
 st.write(css, unsafe_allow_html=True)
-
 # Initialize the database
 engine = create_engine('sqlite:///sessions.db')
 metadata = MetaData()
@@ -432,14 +401,17 @@ sessions_table = Table(
     Column('title', String),
     Column('subtitle', String),
     Column('time', String),
-    Column('messages', Text)
+    Column('messages', String)
 )
+print("Table\n")
+print(sessions_table)
 
 metadata.create_all(engine)
 DBSession = sessionmaker(bind=engine)
 db_session = DBSession()
-
-# Sidebar navigation
+st.session_state['chat'] = ChatGoogleGenerativeAI(model="gemini-1.5-pro",temperature=0,api_key=api_key,convert_system_message_to_human=True)
+  
+# Sidebar navigation with model selection
 def sidebar():
     st.sidebar.header("Navigation")
     pages = ["Today", "Sessions", "Tools", "Therapists", "Insights", "Settings", "How to use?"]
@@ -449,9 +421,19 @@ def sidebar():
         [f"{icons[i]} {pages[i]}" for i in range(len(pages))],
         format_func=lambda x: x.split(" ", 1)[1]
     )
+    
+          
+    
+
     return selected_page.split(" ", 1)[1]
 
 page = sidebar()
+
+# Initialize the selected model and API key
+if 'api_key' not in st.session_state:
+    st.session_state['api_key'] = None
+if 'chat' not in st.session_state:
+    st.session_state['chat'] = None
 
 # Function to load sessions from the database
 def load_sessions():
@@ -479,7 +461,6 @@ def save_session(session):
         'messages': str(session['messages'])
     })
     db_session.commit()
-
 
 
 # Function to add new session to the database
@@ -514,7 +495,6 @@ therapist_templates = {
         Your primary goal is to provide emotional support, offer practical advice, and guide users to helpful resources. 
         You are non-judgmental, understanding, and always prioritize the user's well-being. 
         Respond in a calm and reassuring manner, ensuring that users feel heard and supported.
-
         Guidelines:
         1. Always be empathetic, supportive, and non-judgmental.
         2. Provide practical advice and suggest resources where appropriate.
@@ -526,17 +506,16 @@ therapist_templates = {
         8. Validate the user's feelings and experiences.
         9. Offer coping strategies and self-care tips.
         10. Maintain confidentiality and respect the user's privacy.
-      Respond in {language}.
+        11. Do not use emojis
+      Translate and respond in {language}.
         Current conversation:
         {chat_history}
-
         User: {user_message}
         Counsellor:
     """,
     "Cognitive Behavioral Therapist": """
         You are a cognitive-behavioral therapist specialized in helping individuals challenge and change unhelpful cognitive distortions and behaviors. 
         Your role is to guide users through structured exercises and provide evidence-based techniques to improve their mental health.
-
         Guidelines:
         1. Always be empathetic, supportive, and non-judgmental.
         2. Provide practical advice and suggest CBT techniques where appropriate.
@@ -548,17 +527,16 @@ therapist_templates = {
         8. Offer step-by-step guidance for CBT exercises.
         9. Encourage users to set and work towards achievable goals.
         10. Provide positive reinforcement and celebrate progress.
-      Respond in {language}.
+        11. Do not use emojis
+      Translate and Respond in {language}.
         Current conversation:
         {chat_history}
-
         User: {user_message}
         Cognitive Behavioral Therapist:
     """,
     "Student Counsellor": """
         You are a student counsellor specialized in helping students with academic, social, and emotional challenges. 
         Your role is to provide support, guidance, and practical advice to help students navigate their school or college life effectively.
-
         Guidelines:
         1. Always be empathetic, supportive, and non-judgmental.
         2. Provide practical advice and suggest resources where appropriate.
@@ -570,17 +548,16 @@ therapist_templates = {
         8. Provide tips for managing stress and anxiety.
         9. Encourage students to set academic and personal goals.
         10. Validate students' feelings and experiences.
-      Respond in {language}.
+        11. Do not use emojis
+      Translate and Respond in {language}.
         Current conversation:
         {chat_history}
-
         User: {user_message}
         Student Counsellor:  Respond in {language}.
     """,
     "Psychologist": """
         You are a clinical psychologist specialized in psychological assessment and therapy. 
         Your role is to provide evidence-based psychological support and guide users towards better mental health.
-
         Guidelines:
         1. Always be empathetic, supportive, and non-judgmental.
         2. Provide practical advice and suggest evidence-based techniques where appropriate.
@@ -592,10 +569,10 @@ therapist_templates = {
         8. Offer step-by-step guidance for therapeutic exercises.
         9. Encourage users to set and work towards achievable goals.
         10. Provide positive reinforcement and celebrate progress.
-      Respond in {language}.
+        11. Do not use emojis
+      Translate and Respond in {language}.
         Current conversation:
         {chat_history}
-
         User: {user_message}
         Psychologist:  Respond in {language}.
     """,
@@ -603,7 +580,6 @@ therapist_templates = {
         You are a supportive and understanding friend who is always here to listen and chat about anything. 
         Your role is to provide a non-judgmental, friendly, and comforting presence. 
         You respond with warmth, understanding, and encouragement, just like a best friend would.
-
         Guidelines:
         1. Always be empathetic, supportive, and non-judgmental.
         2. Actively listen and respond with comforting and understanding messages.
@@ -615,10 +591,10 @@ therapist_templates = {
         8. Provide meaningful and contextually appropriate support.
         9. Maintain a casual and approachable tone.
         10. Share personal anecdotes and experiences to build rapport.
-     
+        11. Do not use emojis
+        Translate and respond in {language}
         Current conversation:
         {chat_history}
-
         User: {user_message}
         Best Friend:  Respond in {language}.
     """
@@ -652,6 +628,25 @@ therapists = [
     }
 ]
 
+def remove_emojis(text):
+    # Regular expression pattern for matching emojis
+    emoji_pattern = re.compile(
+        "["                  # Start of the character class
+        u"\U0001f600-\U0001f64f"  # emoticons
+        u"\U0001F300-\U0001F5FF"  # symbols & pictographs
+        u"\U0001F680-\U0001F6FF"  # transport & map symbols
+        u"\U0001F700-\U0001F77F"  # alchemical symbols
+        u"\U0001F780-\U0001F7FF"  # Geometric Shapes Extended
+        u"\U0001F800-\U0001F8FF"  # Supplemental Arrows-C
+        u"\U0001F900-\U0001F9FF"  # Supplemental Symbols and Pictographs
+        u"\U0001FA00-\U0001FA6F"  # Chess Symbols
+        u"\U00002700-\U000027BF"  # Dingbats
+        u"\U000024C2-\U0001F251"  # Enclosed characters
+        "]+", flags=re.UNICODE)
+
+    return emoji_pattern.sub(r'', text)  # Remove emojis
+
+
 # Callback functions
 def open_session(session_id):
     st.session_state['current_session'] = session_id
@@ -670,24 +665,30 @@ def save_conversation_to_file(conversation, filename):
     with open(filename, 'w') as f:
         for message in conversation:
             if isinstance(message, HumanMessage):
-                f.write(f"User: {message.content}\n")
+                f.write(f"User: {message.content}\n")#save message.content to file
             elif isinstance(message, AIMessage):
                 f.write(f"Bot: {message.content}\n")
 
+
+
 # Function to summarize the conversation using the chat model
 def summarize_conversation(messages):
-    conversation_text = "\n".join([f"User: {msg.content}" if isinstance(msg, HumanMessage) else f"Bot: {msg.content}" for msg in messages])
-    summary_prompt = f"Summarize the following conversation:\n\n{conversation_text}"
-    summary_response = chat([SystemMessage(content=summary_prompt)])
-    return summary_response.content.strip()
+    # conversation_text = "\n".join([f"User: {msg.content}" if isinstance(msg, HumanMessage) else f"Bot: {msg.content}" for msg in messages])
+    summary_prompt = f"Summarize the following conversation:\n\n{messages}"
+    # summary_response = get_chatmodel_response([SystemMessage(content=summary_prompt)])
+    return summary_prompt
 
 # Generate insights for the selected session
-def generate_insights(session):
-    messages = session['messages']
+def generate_insights(filename):
+    with open(f'{filename}.txt', 'r') as file:
+        messages = file.read()
+    # messages = sessions_table['messages']
+
+    print("\nMessages \n",messages)
     if not messages:
         return "No messages to summarize.", pd.DataFrame()
     
-    conversation_summary = summarize_conversation(messages)
+    conversation_summary = messages
     
     mood_labels = ['Positive', 'Neutral', 'Negative']
     mood_counts = [0, 0, 0]
@@ -707,47 +708,41 @@ def generate_insights(session):
         'Count': mood_data
     })
 
-    return conversation_summary, mood_df
+    return messages,conversation_summary, mood_df
+
 
 if page == "Today":
     # CSS Injection
     st.markdown('''
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap');
-
     body {
         font-family: 'Poppins', sans-serif;
         color: #333;
     }
-
     .stApp {
         background: linear-gradient(135deg, #f6d365 0%, #fda085 100%);
     }
-
     .today-page {
         max-width: 1200px;
         margin: 0 auto;
         padding: 2rem;
     }
-
     .today-page .header {
         text-align: center;
         margin-bottom: 3rem;
         animation: fadeInDown 1s ease-out;
     }
-
     @keyframes fadeInDown {
         from { opacity: 0; transform: translateY(-30px); }
         to { opacity: 1; transform: translateY(0); }
     }
-
     .today-page .header h1 {
         font-size: 3.5rem;
         color: #ff6b6b;
         margin-bottom: 1rem;
         text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
     }
-
     .today-page .header p {
         font-size: 1.3rem;
         color: #4a4a4a;
@@ -755,13 +750,11 @@ if page == "Today":
         margin: 0 auto;
         line-height: 1.6;
     }
-
     .today-page .content {
         display: flex;
         justify-content: space-around;
         flex-wrap: wrap;
     }
-
     .today-page .card {
         background-color: #ffffff;
         border-radius: 20px;
@@ -774,7 +767,6 @@ if page == "Today":
         overflow: hidden;
         position: relative;
     }
-
     .today-page .card::before {
         content: '';
         position: absolute;
@@ -786,40 +778,33 @@ if page == "Today":
         transform: rotate(45deg);
         transition: all 0.5s ease;
     }
-
     .today-page .card:hover::before {
         left: 100%;
         top: 100%;
     }
-
     .today-page .card:hover {
         transform: translateY(-10px) scale(1.02);
         box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
     }
-
     .today-page .card img {
         max-width: 100%;
         border-radius: 15px;
         margin-bottom: 1.5rem;
         transition: all 0.3s ease;
     }
-
     .today-page .card:hover img {
         transform: scale(1.1);
     }
-
     .today-page .card h3 {
         font-size: 1.8rem;
         color: #2c3e50;
         margin-bottom: 1rem;
     }
-
     .today-page .card p {
         font-size: 1.1rem;
         color: #7f8c8d;
         margin-bottom: 1.5rem;
     }
-
     .today-page .card-button {
         background-color: #4facfe;
         color: #ffffff;
@@ -832,29 +817,23 @@ if page == "Today":
         text-decoration: none;
         display: inline-block;
     }
-
     .today-page .card-button:hover {
         background-color: #00f2fe;
         transform: translateY(-2px);
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
     }
-
     .emoji {
         font-size: 2.5rem;
         margin-bottom: 1rem;
     }
-
     /* Custom card colors */
     .card-wellness { background: linear-gradient(135deg, #c3ec52 0%, #0ba29d 100%); }
     .card-support { background: linear-gradient(135deg, #13f1fc 0%, #0470dc 100%); }
     .card-selfcare { background: linear-gradient(135deg, #f6d365 0%, #fda085 100%); }
-
     .card-wellness .card-button { background-color: #0ba29d; }
     .card-wellness .card-button:hover { background-color: #c3ec52; color: #333; }
-
     .card-support .card-button { background-color: #0470dc; }
     .card-support .card-button:hover { background-color: #13f1fc; color: #333; }
-
     .card-selfcare .card-button { background-color: #fda085; }
     .card-selfcare .card-button:hover { background-color: #f6d365; color: #333; }
     </style>
@@ -892,6 +871,7 @@ if page == "Today":
         </div>
     </div>
     ''', unsafe_allow_html=True)
+
     
 elif page == "Sessions":
     st.subheader("Sessions")
@@ -914,7 +894,7 @@ elif page == "Sessions":
         new_session['id'] = new_session_id
         st.session_state['sessions'].append(new_session)
         st.session_state['current_session'] = new_session_id
-        st.experimental_rerun()
+        st.rerun()
 
     session_columns = st.columns(3)
     for index, session in enumerate(st.session_state['sessions']):
@@ -931,10 +911,10 @@ elif page == "Sessions":
             ''', unsafe_allow_html=True)
             if st.button("Open", key=f"open_{session['id']}"):
                 open_session(session['id'])
-                st.experimental_rerun()
+                st.rerun()
             if st.button("Delete", key=f"delete_{session['id']}"):
                 remove_session(session['id'])
-                st.experimental_rerun()
+                st.rerun()
             st.markdown('</div></div>', unsafe_allow_html=True)
 
     if st.session_state['current_session'] is not None:
@@ -963,21 +943,53 @@ elif page == "Sessions":
             def get_chatmodel_response(question):
                 session['flowmessages'].append(HumanMessage(content=question))
                 memory.save_context({"input": question}, {"output": ""})  # Save the input question to memory
+            
+                # Prepare the chat history for the prompt
                 chat_history = "\n".join([f"User: {msg.content}" if isinstance(msg, HumanMessage) else f"Bot: {msg.content}" for msg in session['flowmessages']])
+            
+                # Construct the prompt using the template
                 prompt = CUSTOM_PROMPT.format(chat_history=chat_history, user_message=question, language=language)
-                messages = [SystemMessage(content=prompt)]
-                answer = chat(messages)  # Pass list of messages to chat
-                session['flowmessages'].append(AIMessage(content=answer.content))  # Adjusted to handle response properly
-                save_session(session)  # Ensure session is saved after adding new messages
+            
+                # Ensure the prompt is not empty
+                if not prompt.strip():
+                    raise ValueError("The constructed prompt is empty. Check the message formatting.")
+            
+                # Use HumanMessage instead of SystemMessage
+                messages = [HumanMessage(content=prompt)]
+            
+                # Get the response from the chat model
+                answer = st.session_state['chat'](messages)  # Pass list of messages to chat
+            
+                # Ensure AI response is not empty
+                if not answer or not answer.content.strip():
+                    raise ValueError("The AI response is empty. Check the prompt or input.")
+                
+                # Append the AI response to the session
+                session['flowmessages'].append(AIMessage(content=answer.content))
+                save_session(session)  # Save the session after appending new messages
+                
                 return answer.content
+
+
 
             input = st.text_input("Input: ", key="input")
             submit = st.button("Ask the question")
 
             if submit:
-                response = get_chatmodel_response(input)
+                cleaned_input = remove_emojis(input)
+                
+                response = get_chatmodel_response(cleaned_input) 
                 save_session(session)
-                st.experimental_rerun()
+                filename = f"{session['title']}.txt"
+                save_conversation_to_file(session['flowmessages'], filename)
+                with open(filename, 'rb') as file:
+                    st.download_button(
+                        label="Download Conversation",
+                        data=file,
+                        file_name=filename,
+                        mime='text/plain'
+                    )
+                st.rerun()
             if "flowmessages" in session:
                 st.subheader("Chat")
                 for message in session['flowmessages']:
@@ -991,20 +1003,11 @@ elif page == "Sessions":
             if st.button("Rename"):
                 session["title"] = new_title
                 save_session(session)
-                st.experimental_rerun()
+                st.rerun()
 
-            # Save conversation to file
-            if st.button("Download Conversation"):
-                filename = f"{session['title']}.txt"
-                save_conversation_to_file(session['flowmessages'], filename)
-                with open(filename, 'rb') as file:
-                    st.download_button(
-                        label="Download Conversation",
-                        data=file,
-                        file_name=filename,
-                        mime='text/plain'
-                    )
 
+
+# Define other tool functions here...
 def breathing_exercise():
     st.markdown("""
     <style>
@@ -1095,7 +1098,6 @@ if page == "Tools":
                     st.write(f"{tool['title']} tool is not yet implemented.")
 
 
-
 elif page == "Therapists":
     st.subheader("Choose Your Therapist")
     st.write("Select a therapist to guide you through your mental health journey !")
@@ -1114,21 +1116,23 @@ elif page == "Therapists":
             ''', unsafe_allow_html=True)
             if st.button(f"Select {therapist['name']}", key=f"select_{therapist['name']}"):
                 select_therapist(therapist['name'])
-                st.experimental_rerun()
+                st.rerun()
+
 elif page == "Insights":
     st.subheader("Insights")
 
     session_titles = [session["title"] for session in st.session_state['sessions']]
     selected_session_title = st.selectbox("Select a session", session_titles)
 
+    print("\nFilename\n",selected_session_title)
     if selected_session_title:
         selected_session = next(session for session in st.session_state['sessions'] if session["title"] == selected_session_title)
         print(f"Selected session for insights: {selected_session}")  # Debug statement
 
         if selected_session and 'messages' in selected_session:
-            st.write(f"Messages: {selected_session['messages']}")
-            conversation_summary, mood_df = generate_insights(selected_session)
-
+            message,conversation_summary, mood_df = generate_insights(selected_session_title)
+            st.write(f"Messages: {message}")
+            st.write(f"\nMood: {mood_df}")
             st.markdown("### Conversation Summary")
             st.write(conversation_summary)
 
@@ -1139,16 +1143,16 @@ elif page == "Insights":
                 ax.axis('equal')
                 st.pyplot(fig)
 
-                st.markdown("### Mood Over Time")
-                mood_timeline = pd.Series([msg.content.lower() for msg in selected_session['messages'] if isinstance(msg, HumanMessage)]).apply(
-                    lambda x: 1 if any(word in x for word in ['happy', 'good', 'great', 'awesome']) else (
-                        0 if any(word in x for word in ['okay', 'fine', 'alright', 'normal']) else -1
-                    )
-                )
-                mood_timeline.index = pd.to_datetime(mood_timeline.index, unit='s')
-                mood_timeline_df = mood_timeline.reset_index()
-                mood_timeline_df.columns = ['Time', 'Mood']
-                st.line_chart(mood_timeline_df.set_index('Time'))
+                # st.markdown("### Mood Over Time")
+                # mood_timeline = pd.Series([msg.content.lower() for msg in selected_session['messages'] if isinstance(msg, HumanMessage)]).apply(
+                #     lambda x: 1 if any(word in x for word in ['happy', 'good', 'great', 'awesome']) else (
+                #         0 if any(word in x for word in ['okay', 'fine', 'alright', 'normal']) else -1
+                #     )
+                # )
+                # mood_timeline.index = pd.to_datetime(mood_timeline.index, unit='s')
+                # mood_timeline_df = mood_timeline.reset_index()
+                # mood_timeline_df.columns = ['Time', 'Mood']
+                # st.line_chart(mood_timeline_df.set_index('Time'))
             else:
                 st.write("No mood data to display.")
         else:
@@ -1169,7 +1173,6 @@ elif page == "How to use?":
             <li>Overview of mental health resources.</li>
             <li>Cards with information on understanding mental health, finding support, and self-care tips.</li>
         </ul>
-        <img src="https://www.flaticon.com/svg/static/icons/svg/3144/3144456.svg" alt="Today Page Screenshot">
     </div>
     <div class="section">
         <h3>🗨️ Sessions:</h3>
@@ -1178,7 +1181,6 @@ elif page == "How to use?":
             <li>Start a new session, open existing ones, or delete sessions you no longer need.</li>
             <li>In each session, you can chat with the AI and download conversation history.</li>
         </ul>
-        <img src="https://www.flaticon.com/svg/static/icons/svg/3069/3069172.svg" alt="Sessions Page Screenshot">
     </div>
     <div class="section">
         <h3>🛠️ Tools:</h3>
@@ -1186,7 +1188,6 @@ elif page == "How to use?":
             <li>Interactive exercises based on cognitive-behavioral therapy.</li>
             <li>Use these tools to solve problems, set goals, and more.</li>
         </ul>
-        <img src="https://www.flaticon.com/svg/static/icons/svg/3135/3135715.svg" alt="Tools Page Screenshot">
     </div>
     <div class="section">
         <h3>👥 Therapists:</h3>
@@ -1194,7 +1195,6 @@ elif page == "How to use?":
             <li>Choose an AI therapist that best suits your needs.</li>
             <li>Each therapist has a unique approach and style.</li>
         </ul>
-        <img src="https://www.flaticon.com/svg/static/icons/svg/2784/2784459.svg" alt="Therapists Page Screenshot">
     </div>
     <div class="section">
         <h3>📊 Insights:</h3>
@@ -1202,14 +1202,12 @@ elif page == "How to use?":
             <li>Analyze your chat sessions.</li>
             <li>View summaries and mood analysis over time.</li>
         </ul>
-        <img src="https://www.flaticon.com/svg/static/icons/svg/2913/2913611.svg" alt="Insights Page Screenshot">
     </div>
     <div class="section">
         <h3>⚙️ Settings:</h3>
         <ul>
             <li>Configure your preferences and application settings.</li>
         </ul>
-        <img src="https://www.flaticon.com/svg/static/icons/svg/2920/2920067.svg" alt="Settings Page Screenshot">
     </div>
     <p>If you have any questions, feel free to ask!</p>
 </div>
