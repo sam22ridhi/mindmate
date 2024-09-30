@@ -3,7 +3,6 @@
 ## Team: Error 404 🚀
 
 - [Asmi Parikh](https://github.com/asmi902)
-- [Kayan Irani](https://github.com/KayanIrani)
 - [Samridhi Sinha](https://github.com/sam22ridhi)
 - [Surya Vemuri](https://github.com/suryavemuri30)
 - [Vidhi Damani](https://github.com/vidhi-damani)
@@ -181,5 +180,3 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 - Google for providing the AI infrastructure and models used in this chatbot.
 
 ---
-
-By removing the Orkes integration and tailoring the project around **Google GenAI**, the chatbot maintains its focus on providing personalized, scalable mental health support.
